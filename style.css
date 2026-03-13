@@ -1,37 +1,22 @@
 body{
+
 margin:0;
-font-family:Arial, sans-serif;
-background:#111;
-color:white;
+font-family:Arial;
+
 }
 
-header{
+h2{
+
 text-align:center;
 padding:10px;
 background:#222;
+color:white;
+
 }
 
 #map{
-height:80vh;
-}
 
-#panel{
-
-height:20vh;
-display:flex;
-justify-content:space-around;
-align-items:center;
-background:#333;
-
-}
-
-button{
-
-padding:10px 20px;
-font-size:16px;
-cursor:pointer;
-border:none;
-background:#4CAF50;
-color:white;
+height:90vh;
+width:100%;
 
 }
