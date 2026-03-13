@@ -1,37 +1,64 @@
-let map = L.map('map').setView([13.0827,80.2707],17)
+let map = L.map('map',{
+maxZoom:22,
+minZoom:3
+})
 
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map)
+map.setView([13.0067,80.2337],18)
+
+L.tileLayer(
+'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+{
+maxZoom:22,
+}).addTo(map)
 
 let path = []
-let polyline = L.polyline([], {color:'red'}).addTo(map)
 
-let territories = []
+let polyline = L.polyline([],{color:'green',weight:5}).addTo(map)
 
-navigator.geolocation.watchPosition(updatePosition)
-
-function updatePosition(pos){
-
-let lat = pos.coords.latitude
-let lon = pos.coords.longitude
-
-let point = [lat,lon]
-
-path.push(point)
-
-polyline.addLatLng(point)
-
-map.setView(point)
-
-checkLoop()
-
-}
+let lastPoint = null
 
 function distance(a,b){
 
 let dx = a[0]-b[0]
 let dy = a[1]-b[1]
 
-return Math.sqrt(dx*dx+dy*dy)
+return Math.sqrt(dx*dx + dy*dy)
+
+}
+
+function updatePosition(pos){
+
+let lat = pos.coords.latitude
+let lon = pos.coords.longitude
+let accuracy = pos.coords.accuracy
+
+// ignore bad gps signal
+if(accuracy > 30) return
+
+let point = [lat,lon]
+
+// spike filter
+if(lastPoint){
+
+let d = distance(lastPoint,point)
+
+if(d > 0.002){
+
+return
+
+}
+
+}
+
+lastPoint = point
+
+path.push(point)
+
+polyline.addLatLng(point)
+
+map.setView(point,20)
+
+checkLoop()
 
 }
 
@@ -42,36 +69,38 @@ if(path.length < 10) return
 let start = path[0]
 let end = path[path.length-1]
 
-if(distance(start,end) < 0.0001){
+let d = distance(start,end)
 
-captureTerritory()
+if(d < 0.0002){
 
-}
+let polygon = L.polygon(path,{
+color:'green',
+fillOpacity:0.4
+}).addTo(map)
 
-}
-
-function captureTerritory(){
-
-let polygon = L.polygon(path,{color:'green'}).addTo(map)
-
-let geojson = polygon.toGeoJSON()
-
-let area = turf.area(geojson)
-
-document.getElementById("area").innerText = Math.round(area)
-
-territories.push(polygon)
-
-path = []
-
+path=[]
 polyline.setLatLngs([])
 
 }
 
-document.getElementById("reset").addEventListener("click",function(){
+}
 
-path = []
+navigator.geolocation.watchPosition(
 
-polyline.setLatLngs([])
+updatePosition,
 
-})
+function(e){
+
+console.log(e)
+
+},
+
+{
+
+enableHighAccuracy:true,
+maximumAge:0,
+timeout:5000
+
+}
+
+)
