@@ -8,14 +8,19 @@ map.setView([13.0067,80.2337],18)
 L.tileLayer(
 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
 {
-maxZoom:22,
+maxZoom:22
 }).addTo(map)
 
 let path = []
-
-let polyline = L.polyline([],{color:'green',weight:5}).addTo(map)
-
 let lastPoint = null
+
+let polyline = L.polyline([],{
+color:'red',
+weight:5,
+smoothFactor:1
+}).addTo(map)
+
+let player = L.marker([13.0067,80.2337]).addTo(map)
 
 function distance(a,b){
 
@@ -26,26 +31,45 @@ return Math.sqrt(dx*dx + dy*dy)
 
 }
 
+// polygon area calculation (approx meters²)
+function polygonArea(coords){
+
+let area = 0
+
+for(let i=0;i<coords.length;i++){
+
+let j=(i+1)%coords.length
+
+let xi = coords[i][1]*111320
+let yi = coords[i][0]*111320
+
+let xj = coords[j][1]*111320
+let yj = coords[j][0]*111320
+
+area += (xi*yj - xj*yi)
+
+}
+
+return Math.abs(area/2)
+
+}
+
 function updatePosition(pos){
 
 let lat = pos.coords.latitude
 let lon = pos.coords.longitude
 let accuracy = pos.coords.accuracy
 
-// ignore bad gps signal
-if(accuracy > 30) return
+if(accuracy > 40) return
 
 let point = [lat,lon]
 
-// spike filter
 if(lastPoint){
 
 let d = distance(lastPoint,point)
 
-if(d > 0.002){
-
+if(d > 0.0015){
 return
-
 }
 
 }
@@ -56,7 +80,9 @@ path.push(point)
 
 polyline.addLatLng(point)
 
-map.setView(point,20)
+player.setLatLng(point)
+
+map.panTo(point)
 
 checkLoop()
 
@@ -64,22 +90,37 @@ checkLoop()
 
 function checkLoop(){
 
-if(path.length < 10) return
+if(path.length < 15) return
 
 let start = path[0]
 let end = path[path.length-1]
 
 let d = distance(start,end)
 
-if(d < 0.0002){
+if(d < 0.00015){
+
+let area = polygonArea(path)
 
 let polygon = L.polygon(path,{
 color:'green',
 fillOpacity:0.4
 }).addTo(map)
 
+polygon.bindPopup(
+"Territory Captured<br>Area: " + area.toFixed(0) + " m²"
+)
+
+polyline.setStyle({
+color:'green'
+})
+
+setTimeout(()=>{
+
 path=[]
 polyline.setLatLngs([])
+polyline.setStyle({color:'red'})
+
+},2000)
 
 }
 
@@ -90,17 +131,13 @@ navigator.geolocation.watchPosition(
 updatePosition,
 
 function(e){
-
 console.log(e)
-
 },
 
 {
-
 enableHighAccuracy:true,
 maximumAge:0,
-timeout:5000
-
+timeout:4000
 }
 
 )
